@@ -10,6 +10,10 @@ const {
 } =
 require("../controllers/destination.controller");
 
+const {
+    refresh
+} = require("../controllers/refresh.controller");
+
 
 
 const router =
@@ -20,6 +24,11 @@ express.Router();
 router.get(
     "/destinations",
     destinations
+);
+
+router.post(
+    "/refresh",
+    refresh
 );
 
 

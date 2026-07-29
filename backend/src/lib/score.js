@@ -44,22 +44,41 @@ function scoreWindows(days, options = {}) {
             // Temperature scoring
             if (day.tempMax !== null) {
 
-                const distance = Math.abs(
-                    day.tempMax - 25
-                );
+                let score;
 
-                tempScores.push(
-                    Math.max(
-                        0,
-                        100 - distance * 10
-                    )
-                );
+
+                if (
+                    day.tempMax >= 20 &&
+                    day.tempMax <= 30
+                ) {
+
+                    score = 100;
+
+                }
+                else {
+
+                    const distance =
+                        day.tempMax < 20
+                            ? 20 - day.tempMax
+                            : day.tempMax - 30;
+
+
+                    score =
+                        Math.max(
+                            0,
+                            100 - distance * 10
+                        );
+
+                }
+
+
+                tempScores.push(score);
 
             }
 
 
             // Rain penalty
-            if(day.precipProbability !== null){
+            if (day.precipProbability !== null) {
 
                 precipScores.push(
                     100 - day.precipProbability
@@ -69,7 +88,7 @@ function scoreWindows(days, options = {}) {
 
 
             // Wind penalty
-            if(day.windMax !== null){
+            if (day.windMax !== null) {
 
                 windScores.push(
                     Math.max(
@@ -116,7 +135,7 @@ function scoreWindows(days, options = {}) {
                 window[0].date,
 
             endDate:
-                window[window.length-1].date,
+                window[window.length - 1].date,
 
 
             score:
@@ -126,10 +145,10 @@ function scoreWindows(days, options = {}) {
             hasMissingData,
 
 
-            breakdown:{
-                temp:Number(temp.toFixed(1)),
-                precip:Number(precip.toFixed(1)),
-                wind:Number(wind.toFixed(1))
+            breakdown: {
+                temp: Number(temp.toFixed(1)),
+                precip: Number(precip.toFixed(1)),
+                wind: Number(wind.toFixed(1))
             }
 
         });
@@ -140,10 +159,10 @@ function scoreWindows(days, options = {}) {
 
     // Deterministic sorting
     return results.sort(
-        (a,b)=>{
+        (a, b) => {
 
-            if(b.score !== a.score)
-                return b.score-a.score;
+            if (b.score !== a.score)
+                return b.score - a.score;
 
 
             return a.startDate.localeCompare(
@@ -158,14 +177,14 @@ function scoreWindows(days, options = {}) {
 
 
 // Calculate safe average
-function average(values){
+function average(values) {
 
-    if(values.length===0)
-        return 0;
+    if (values.length === 0)
+        return 50;
 
 
     return values.reduce(
-        (a,b)=>a+b,
+        (a, b) => a + b,
         0
     ) / values.length;
 
@@ -174,16 +193,16 @@ function average(values){
 
 
 // Keep values inside range
-function clamp(value,min,max){
+function clamp(value, min, max) {
 
     return Math.min(
-        Math.max(value,min),
+        Math.max(value, min),
         max
     );
 
 }
 
 
-module.exports={
+module.exports = {
     scoreWindows
 };
