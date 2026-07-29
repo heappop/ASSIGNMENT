@@ -31,6 +31,11 @@ const {
     scoreWindows
 } = require("../lib/score");
 
+const {
+    successBlock,
+    errorBlock
+} = require("../utils/blockResponse");
+
 
 
 // Default currency mapping
@@ -112,11 +117,9 @@ function createBlock(result){
         typeof result !== "object"
     ){
 
-        return {
-            status:"error",
-            error:"invalid_upstream_result",
-            data:null
-        };
+        return errorBlock({
+            message: "invalid_upstream_result"
+        });
 
     }
 
@@ -125,48 +128,50 @@ function createBlock(result){
         result.status === "ok"
     ){
 
-        return {
-
-            status:"ok",
-
-            fetchedAt:
-            new Date().toISOString(),
-
+        return successBlock(result.data, {
             validAt:
             result.data?.validAt
             ||
-            null,
-
-            stale:false,
-
-            data:
-            result.data
-
-        };
+            null
+        });
 
     }
 
 
-
-    return {
-
-        status:
-        result.status
-        ||
-        "error",
-
-        error:
+    return errorBlock({
+        code:
+        result.status === "timeout"
+        ? "TIMEOUT"
+        : null,
+        message:
         result.error
         ||
-        "upstream_error",
-
-        data:null
-
-    };
-
+        "upstream_error"
+    });
 
 }
 
+
+
+async function callWithRetry(operation, retries = 1, delayMs = 200) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+
+            if (attempt === retries) {
+                throw error;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+    }
+
+    throw lastError;
+}
 
 
 // Get destination information
@@ -224,7 +229,7 @@ async function getDestinations(
         const countryPromise =
             resolved.countryCode
             ?
-            getCountry(resolved.countryCode)
+            callWithRetry(() => getCountry(resolved.countryCode), 1)
             :
             Promise.resolve({
                 status:"ok",
@@ -243,16 +248,16 @@ async function getDestinations(
 
 
 
-            getWeather(
+            callWithRetry(() => getWeather(
                 resolved.lat,
                 resolved.lon
-            ),
+            ), 1),
 
 
 
-            getFx(
+            callWithRetry(() => getFx(
                 DEFAULT_CURRENCY
-            ),
+            ), 1),
 
 
 
@@ -260,10 +265,10 @@ async function getDestinations(
 
 
 
-            getPoi(
+            callWithRetry(() => getPoi(
                 resolved.lat,
                 resolved.lon
-            )
+            ), 1)
 
 
         ]);
@@ -272,34 +277,58 @@ async function getDestinations(
 
         // Extract fulfilled promises safely
         const weather =
+            weatherResult.status === "fulfilled"
+            ?
             weatherResult.value
-            ||
+            :
             {
-                status:"error"
+                status:"error",
+                error:
+                weatherResult.reason?.message
+                ||
+                "upstream_error"
             };
 
 
         const fx =
+            fxResult.status === "fulfilled"
+            ?
             fxResult.value
-            ||
+            :
             {
-                status:"error"
+                status:"error",
+                error:
+                fxResult.reason?.message
+                ||
+                "upstream_error"
             };
 
 
         const country =
+            countryResult.status === "fulfilled"
+            ?
             countryResult.value
-            ||
+            :
             {
-                status:"error"
+                status:"error",
+                error:
+                countryResult.reason?.message
+                ||
+                "upstream_error"
             };
 
 
         const poi =
+            poiResult.status === "fulfilled"
+            ?
             poiResult.value
-            ||
+            :
             {
-                status:"error"
+                status:"error",
+                error:
+                poiResult.reason?.message
+                ||
+                "upstream_error"
             };
 
 

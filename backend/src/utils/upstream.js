@@ -7,6 +7,7 @@ const axios = require("axios");
 
 // Default timeout for external services
 const DEFAULT_TIMEOUT = 5000;
+const OVERPASS_TIMEOUT = 3000;
 
 
 function mockRequest(config){
@@ -107,12 +108,18 @@ async function request(config){
 
     try {
 
+        const timeout =
+            config.url?.includes("overpass")
+            ?
+            OVERPASS_TIMEOUT
+            :
+            DEFAULT_TIMEOUT;
+
 
         const response =
             await axios({
 
-                timeout:
-                DEFAULT_TIMEOUT,
+                timeout,
 
 
                 validateStatus:
@@ -172,7 +179,7 @@ async function request(config){
 
 
             error:
-            error.message,
+            error.message || "upstream_failed",
 
 
             data:null
