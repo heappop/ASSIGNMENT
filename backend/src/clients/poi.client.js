@@ -10,6 +10,9 @@ const cache = require("../cache/cache");
 
 const CACHE_TTL = require("../constants/cacheTTL");
 
+const stats =
+    require("../lib/stats");
+
 
 
 // Fetch nearby point of interest count
@@ -40,8 +43,8 @@ out count;
 `;
 
 
-
-    // Call Overpass API
+    stats.increment("overpass");
+    
     // Call Overpass API
     const response =
         await request({

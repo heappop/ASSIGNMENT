@@ -9,7 +9,8 @@ const {
 const cache = require("../cache/cache");
 
 const CACHE_TTL = require("../constants/cacheTTL");
-
+const stats =
+    require("../lib/stats");
 
 
 // Get currency exchange rate
@@ -47,7 +48,7 @@ async function getFx(currency) {
 
     }
 
-
+    stats.increment("frankfurter");
 
     // Call Frankfurter API
     const response =

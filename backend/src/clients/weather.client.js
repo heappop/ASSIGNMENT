@@ -9,6 +9,8 @@ const {
 const cache = require("../cache/cache");
 
 const CACHE_TTL = require("../constants/cacheTTL");
+const stats =
+    require("../lib/stats");
 
 // Fetch weather forecast using coordinates
 async function getWeather(
@@ -27,6 +29,7 @@ async function getWeather(
         return cached;
     }
 
+    stats.increment("openmeteo");
 
     // Call Open-Meteo upstream API
     const response =

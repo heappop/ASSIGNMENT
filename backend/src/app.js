@@ -9,6 +9,8 @@ const destinationRoutes =
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
+const debugRoutes =
+    require("./routes/debug.routes");
 
 const app = express();
 
@@ -35,6 +37,11 @@ app.get("/", (req, res) => {
 app.use(
     "/api",
     destinationRoutes
+);
+
+app.use(
+    "/api",
+    debugRoutes
 );
 
 // 404 handler

@@ -11,6 +11,8 @@ const CACHE_TTL = require("../constants/cacheTTL");
 const {
     schedule
 } = require("../cache/rateLimiter");
+const stats =
+    require("../lib/stats");
 
 
 
@@ -18,11 +20,31 @@ const {
 async function searchCity(query) {
 
 
-    // Nominatim must be globally rate limited
+    const normalizedQuery =
+        query.trim().toLowerCase();
+
+
+    const cacheKey =
+        `nominatim:${normalizedQuery}`;
+
+
+    // Check cache first
+    const cached =
+        cache.get(cacheKey);
+
+
+    if (cached) {
+        return cached;
+    }
+
+
     return schedule(async () => {
 
 
-        // Call upstream API
+        // Count only actual upstream calls
+        stats.increment("nominatim");
+
+
         const response =
             await request({
 
@@ -33,7 +55,7 @@ async function searchCity(query) {
 
                 params: {
 
-                    q: query,
+                    q: normalizedQuery,
 
                     format: "json",
 
@@ -41,10 +63,8 @@ async function searchCity(query) {
 
                 },
 
-
                 headers: {
 
-                    // Required by Nominatim policy
                     "User-Agent":
                         "saltstayz-destination-board"
 
@@ -52,15 +72,6 @@ async function searchCity(query) {
 
             });
 
-        // Cache key
-        const cacheKey = `nominatim:${query.toLowerCase()}`;
-
-        // Return cached response if available
-        const cached = cache.get(cacheKey);
-
-        if (cached) {
-            return cached;
-        }
 
         const result = {
 
@@ -85,17 +96,17 @@ async function searchCity(query) {
 
         };
 
-        // Store in cache
+
         cache.set(
             cacheKey,
             result,
             CACHE_TTL.NOMINATIM
         );
 
+
         return result;
 
     });
-
 
 }
 
