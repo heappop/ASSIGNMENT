@@ -5,14 +5,14 @@
 module.exports = {
 
 
-    // Coordinates rarely change
+    // Coordinates rarely change (7 days)
     NOMINATIM:
-        30 * 24 * 60 * 60 * 1000,
+        7 * 24 * 60 * 60 * 1000,
 
 
-    // Weather changes frequently
+    // Weather changes frequently (60 minutes)
     WEATHER:
-        15 * 60 * 1000,
+        60 * 60 * 1000,
 
 
     // Currency updates daily
@@ -20,12 +20,12 @@ module.exports = {
         24 * 60 * 60 * 1000,
 
 
-    // Country metadata rarely changes
+    // Country metadata rarely changes (30 days)
     COUNTRY:
         30 * 24 * 60 * 60 * 1000,
 
 
-    // POI density changes slowly
+    // POI density changes slowly (24 hours)
     POI:
-        6 * 60 * 60 * 1000
+        24 * 60 * 60 * 1000
 };

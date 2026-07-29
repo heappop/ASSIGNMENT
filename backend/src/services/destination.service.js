@@ -1,5 +1,5 @@
-// Destination service
-// Orchestrates all upstream clients and builds final response
+// Service layer responsible for aggregating data from multiple third-party upstreams.
+// It orchestrates independent requests in parallel and gracefully degrades when specific blocks fail.
 
 
 const {
@@ -108,47 +108,27 @@ async function resolveCity(query){
 
 
 
-// Convert upstream result into block format
+// Transforms the raw upstream results into the strict block contract expected by the frontend.
+// It ensures every block has a standard wrapper with a status indicator.
 function createBlock(result){
 
-    if(
-        !result
-        ||
-        typeof result !== "object"
-    ){
-
-        return errorBlock({
-            message: "invalid_upstream_result"
-        });
-
+    // Fallback if upstream returns garbage
+    if(!result || typeof result !== "object"){
+        return errorBlock({ message: "invalid_upstream_result" });
     }
 
-
-    if(
-        result.status === "ok"
-    ){
-
+    // Wrap successful responses with necessary validAt metadata
+    if(result.status === "ok"){
         return successBlock(result.data, {
-            validAt:
-            result.data?.validAt
-            ||
-            null
+            validAt: result.data?.validAt || null
         });
-
     }
 
-
+    // Gracefully handle specific error scenarios, such as connection timeouts
     return errorBlock({
-        code:
-        result.status === "timeout"
-        ? "TIMEOUT"
-        : null,
-        message:
-        result.error
-        ||
-        "upstream_error"
+        code: result.status === "timeout" ? "TIMEOUT" : null,
+        message: result.error || "upstream_error"
     });
-
 }
 
 
@@ -224,58 +204,27 @@ async function getDestinations(
 
 
 
-        // Step 2:
-        // Fetch independent upstreams together
-        const countryPromise =
-            resolved.countryCode
-            ?
-            callWithRetry(() => getCountry(resolved.countryCode), 1)
-            :
-            Promise.resolve({
-                status:"ok",
-                data:null
-            });
-
+        // Step 2: Fetch all auxiliary data points in parallel.
+        // We use Promise.allSettled to ensure that one failing block (e.g., Overpass POI) 
+        // does not take down the entire response for the city.
+        const countryPromise = resolved.countryCode
+            ? callWithRetry(() => getCountry(resolved.countryCode), 1)
+            : Promise.resolve({ status: "ok", data: null });
 
         const [
             weatherResult,
             fxResult,
             countryResult,
             poiResult
-
-        ] =
-        await Promise.allSettled([
-
-
-
-            callWithRetry(() => getWeather(
-                resolved.lat,
-                resolved.lon
-            ), 1),
-
-
-
-            callWithRetry(() => getFx(
-                DEFAULT_CURRENCY
-            ), 1),
-
-
-
+        ] = await Promise.allSettled([
+            callWithRetry(() => getWeather(resolved.lat, resolved.lon), 1),
+            callWithRetry(() => getFx(DEFAULT_CURRENCY), 1),
             countryPromise,
-
-
-
-            callWithRetry(() => getPoi(
-                resolved.lat,
-                resolved.lon
-            ), 1)
-
-
+            callWithRetry(() => getPoi(resolved.lat, resolved.lon), 1)
         ]);
 
-
-
-        // Extract fulfilled promises safely
+        // Step 3: Extract results safely. If an upstream completely threw an unhandled exception, 
+        // we isolate it to just that block.
         const weather =
             weatherResult.status === "fulfilled"
             ?

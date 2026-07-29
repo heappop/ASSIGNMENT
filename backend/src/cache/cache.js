@@ -105,6 +105,16 @@ function remove(key){
 
 }
 
+// Delete all cache entries with the provided prefix
+function removeByPrefix(prefix){
+    for (const key of Array.from(store.keys())) {
+        if (key.startsWith(prefix)) {
+            store.delete(key);
+        }
+    }
+
+    stats.entries = store.size;
+}
 
 
 // Clear entire cache

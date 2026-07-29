@@ -1,6 +1,10 @@
-// Client for Overpass API
-// Counts nearby amenities around a location
-
+/**
+ * Point of Interest (POI) Client
+ * 
+ * Interfaces with the Overpass API to query nearby amenities and calculate 
+ * density around specific coordinates. This is a deliberately slow and flaky API, 
+ * requiring robust fallback handling.
+ */
 
 const {
     request
@@ -12,56 +16,58 @@ const CACHE_TTL = require("../constants/cacheTTL");
 
 const stats =
     require("../lib/stats");
+const { coalesce } = require("../utils/requestCoalescer");
 
 
 
-// Fetch nearby point of interest count
+/**
+ * Fetches the count of amenities (POIs) within a 2000m radius of the provided coordinates.
+ * Utilizes the request coalescer to avoid bombarding Overpass during parallel requests.
+ * 
+ * @param {number} latitude 
+ * @param {number} longitude 
+ * @returns {Promise<Object>} The POI count or an error block if the upstream fails.
+ */
 async function getPoi(
     latitude,
     longitude
 ) {
 
 
-    const cacheKey =
-        `poi:${latitude}:${longitude}`;
+    // Unique cache key derived from geographical coordinates
+    const cacheKey = `poi:${latitude}:${longitude}`;
 
-    const cached =
-        cache.get(cacheKey);
-
+    // Return the density immediately if it's currently cached
+    const cached = cache.get(cacheKey);
     if (cached) {
-
         return cached;
-
     }
 
-    // Overpass query
-    const query =
-        `
+    // Wrap the outgoing request in our coalescer. If multiple incoming requests 
+    // ask for this exact coordinate pair concurrently, only the first one executes 
+    // the Overpass call; the rest wait for its promise to resolve.
+    return coalesce(cacheKey, async () => {
+
+    // Construct the Overpass QL query string
+    // This looks for any nodes with an 'amenity' tag within 2000 meters 
+    // of the specified latitude and longitude, with a strict 20-second timeout.
+    const query = `
 [out:json][timeout:20];
 node(around:2000,${latitude},${longitude})[amenity];
 out count;
 `;
 
-
+    // Track upstream invocations for debugging and telemetry
     stats.increment("overpass");
-    
-    // Call Overpass API
-    const response =
-        await request({
 
+    // Execute the POST request to the interpreter endpoint
+    const response = await request({
             method: "POST",
-
-            url:
-                "https://overpass-api.de/api/interpreter",
-
-
-            // Convert query into form encoded string
-            data:
-                new URLSearchParams({
-
-                    data: query
-
-                }).toString(),
+            url: "https://overpass-api.de/api/interpreter",
+            // Overpass expects the query payload in form-urlencoded format
+            data: new URLSearchParams({
+                data: query
+            }).toString(),
 
 
             headers: {
@@ -94,14 +100,9 @@ out count;
 
 
 
-    // Extract count safely
-    const count =
-        response.data
-            ?.elements?.[0]
-            ?.tags
-            ?.nodes
-        ??
-        0;
+    // Extract the numeric count from the deeply nested Overpass JSON response.
+    // If the path breaks or tags are missing, default to zero safely.
+    const count = response.data?.elements?.[0]?.tags?.nodes ?? 0;
 
 
 
@@ -130,6 +131,7 @@ out count;
 
     return result;
 
+    });
 
 }
 
