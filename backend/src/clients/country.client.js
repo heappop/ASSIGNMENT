@@ -5,28 +5,43 @@
 const {
     request
 } = require("../utils/upstream");
+const cache = require("../cache/cache");
+
+const CACHE_TTL = require("../constants/cacheTTL");
 
 
 
 // Fetch country details by ISO country code
-async function getCountry(countryCode){
+async function getCountry(countryCode) {
+
+    const cacheKey =
+        `country:${countryCode}`;
+
+    const cached =
+        cache.get(cacheKey);
+
+    if (cached) {
+
+        return cached;
+
+    }
 
 
     // Call REST Countries upstream API
     const response =
         await request({
 
-            method:"GET",
+            method: "GET",
 
             url:
-            `https://restcountries.com/v3.1/alpha/${countryCode}`
+                `https://restcountries.com/v3.1/alpha/${countryCode}`
 
         });
 
 
 
     // Upstream request failed
-    if(response.status !== "ok"){
+    if (response.status !== "ok") {
 
         return response;
 
@@ -59,11 +74,11 @@ async function getCountry(countryCode){
 
 
     // Handle normal array response
-    if(
+    if (
         Array.isArray(response.data)
         &&
         response.data.length > 0
-    ){
+    ) {
 
         country =
             response.data[0];
@@ -73,9 +88,9 @@ async function getCountry(countryCode){
 
 
     // Handle object response
-    else if(
+    else if (
         response.data?.name
-    ){
+    ) {
 
         country =
             response.data;
@@ -85,16 +100,16 @@ async function getCountry(countryCode){
 
 
     // Unknown upstream response
-    if(!country){
+    if (!country) {
 
         return {
 
-            status:"error",
+            status: "error",
 
             error:
-            "invalid_country_response",
+                "invalid_country_response",
 
-            data:null
+            data: null
 
         };
 
@@ -102,39 +117,38 @@ async function getCountry(countryCode){
 
 
 
-    // Normalize application response
-    return {
+    const result = {
 
+        status: "ok",
 
-        status:"ok",
-
-
-        data:{
-
+        data: {
 
             name:
-            country.name?.common
-            ||
-            null,
-
+                country.name?.common,
 
             currency:
-            Object.keys(
-                country.currencies || {}
-            )[0]
-            ||
-            null,
-
+                Object.keys(
+                    country.currencies || {}
+                )[0] || null,
 
             region:
-            country.region
-            ||
-            null
+                country.region
 
         }
 
-
     };
+
+    cache.set(
+
+        cacheKey,
+
+        result,
+
+        CACHE_TTL.COUNTRY
+
+    );
+
+    return result;
 
 
 }

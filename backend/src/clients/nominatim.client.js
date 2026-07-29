@@ -3,6 +3,9 @@
 
 const { request } =
     require("../utils/upstream");
+const cache = require("../cache/cache");
+
+const CACHE_TTL = require("../constants/cacheTTL");
 
 
 const {
@@ -49,14 +52,21 @@ async function searchCity(query) {
 
             });
 
+        // Cache key
+        const cacheKey = `nominatim:${query.toLowerCase()}`;
 
+        // Return cached response if available
+        const cached = cache.get(cacheKey);
 
-        return {
+        if (cached) {
+            return cached;
+        }
+
+        const result = {
 
             status: "ok",
 
             data:
-
                 response.data.map(city => ({
 
                     name:
@@ -69,23 +79,20 @@ async function searchCity(query) {
                         Number(city.lon),
 
                     display_name:
-                        city.display_name,
-
-                    // ISO country code from Nominatim
-                    countryCode:
-                        city.address?.country_code
-                            ?.toUpperCase()
-                        ||
-                        null,
-
-                    country:
-                        city.address?.country
-                        ||
-                        null
+                        city.display_name
 
                 }))
 
         };
+
+        // Store in cache
+        cache.set(
+            cacheKey,
+            result,
+            CACHE_TTL.NOMINATIM
+        );
+
+        return result;
 
     });
 

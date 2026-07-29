@@ -27,6 +27,5 @@ module.exports = {
 
     // POI density changes slowly
     POI:
-        7 * 24 * 60 * 60 * 1000
-
+        6 * 60 * 60 * 1000
 };

@@ -6,26 +6,39 @@ const {
     request
 } = require("../utils/upstream");
 
+const cache = require("../cache/cache");
 
+const CACHE_TTL = require("../constants/cacheTTL");
 
 // Fetch weather forecast using coordinates
 async function getWeather(
     latitude,
     longitude
-){
+) {
+
+    // Weather cache key
+    const cacheKey =
+        `weather:${latitude}:${longitude}`;
+
+    // Return cached forecast
+    const cached = cache.get(cacheKey);
+
+    if (cached) {
+        return cached;
+    }
 
 
     // Call Open-Meteo upstream API
     const response =
         await request({
 
-            method:"GET",
+            method: "GET",
 
             url:
-            "https://api.open-meteo.com/v1/forecast",
+                "https://api.open-meteo.com/v1/forecast",
 
 
-            params:{
+            params: {
 
 
                 latitude,
@@ -35,13 +48,13 @@ async function getWeather(
 
 
                 daily:
-                "temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
+                    "temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
 
 
-                forecast_days:14,
+                forecast_days: 14,
 
 
-                timezone:"auto"
+                timezone: "auto"
 
             }
 
@@ -50,9 +63,9 @@ async function getWeather(
 
 
     // Convert upstream response into our application format
-    if(
+    if (
         response.status !== "ok"
-    ){
+    ) {
 
         return response;
 
@@ -67,7 +80,7 @@ async function getWeather(
 
     const days =
         daily.time.map(
-            (date,index)=>{
+            (date, index) => {
 
 
                 return {
@@ -79,30 +92,30 @@ async function getWeather(
 
                     // Maximum temperature
                     tempMax:
-                    daily.temperature_2m_max[index]
-                    ??
-                    null,
+                        daily.temperature_2m_max[index]
+                        ??
+                        null,
 
 
                     // Minimum temperature
                     tempMin:
-                    daily.temperature_2m_min[index]
-                    ??
-                    null,
+                        daily.temperature_2m_min[index]
+                        ??
+                        null,
 
 
                     // Rain probability
                     precipProbability:
-                    daily.precipitation_probability_max[index]
-                    ??
-                    null,
+                        daily.precipitation_probability_max[index]
+                        ??
+                        null,
 
 
                     // Wind speed
                     windMax:
-                    daily.wind_speed_10m_max[index]
-                    ??
-                    null
+                        daily.wind_speed_10m_max[index]
+                        ??
+                        null
 
 
                 };
@@ -112,27 +125,32 @@ async function getWeather(
         );
 
 
+    const result = {
 
-    return {
+        status: "ok",
 
-
-        status:"ok",
-
-
-        data:{
+        data: {
 
             days,
 
-
-            // Open-Meteo provides actual forecast validity date
             validAt:
-            daily.time[0]
+                response.data.daily.time[0]
 
         }
 
-
     };
 
+    cache.set(
+
+        cacheKey,
+
+        result,
+
+        CACHE_TTL.WEATHER
+
+    );
+
+    return result;
 
 }
 

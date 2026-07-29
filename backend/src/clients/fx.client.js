@@ -6,24 +6,40 @@ const {
     request
 } = require("../utils/upstream");
 
+const cache = require("../cache/cache");
+
+const CACHE_TTL = require("../constants/cacheTTL");
+
 
 
 // Get currency exchange rate
-async function getFx(currency){
+async function getFx(currency) {
+
+    const cacheKey =
+        `fx:${currency}`;
+
+    const cached =
+        cache.get(cacheKey);
+
+    if (cached) {
+
+        return cached;
+
+    }
 
 
     // INR does not need external conversion
-    if(currency === "IN"){
+    if (currency === "IN") {
 
         return {
 
-            status:"ok",
+            status: "ok",
 
-            data:{
+            data: {
 
-                currency:"INR",
+                currency: "INR",
 
-                rateToInr:1
+                rateToInr: 1
 
             }
 
@@ -37,16 +53,16 @@ async function getFx(currency){
     const response =
         await request({
 
-            method:"GET",
+            method: "GET",
 
             url:
-            "https://api.frankfurter.app/latest",
+                "https://api.frankfurter.app/latest",
 
-            params:{
+            params: {
 
-                from:currency,
+                from: currency,
 
-                to:"INR"
+                to: "INR"
 
             }
 
@@ -54,33 +70,41 @@ async function getFx(currency){
 
 
 
-    if(response.status !== "ok"){
+    if (response.status !== "ok") {
 
         return response;
 
     }
 
 
+    const result = {
 
-    return {
+        status: "ok",
 
-
-        status:"ok",
-
-
-        data:{
+        data: {
 
             currency,
 
+            rateToInr,
 
-            rateToInr:
-            response.data.rates.INR
+            validAt:
+                response.data.date
 
         }
 
-
     };
 
+    cache.set(
+
+        cacheKey,
+
+        result,
+
+        CACHE_TTL.FX
+
+    );
+
+    return result;
 
 }
 

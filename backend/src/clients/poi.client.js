@@ -6,6 +6,10 @@ const {
     request
 } = require("../utils/upstream");
 
+const cache = require("../cache/cache");
+
+const CACHE_TTL = require("../constants/cacheTTL");
+
 
 
 // Fetch nearby point of interest count
@@ -14,6 +18,18 @@ async function getPoi(
     longitude
 ) {
 
+
+    const cacheKey =
+        `poi:${latitude}:${longitude}`;
+
+    const cached =
+        cache.get(cacheKey);
+
+    if (cached) {
+
+        return cached;
+
+    }
 
     // Overpass query
     const query =
@@ -86,20 +102,30 @@ out count;
 
 
 
-    return {
-
+    const result = {
 
         status: "ok",
 
-
         data: {
 
-            count: Number(count)
+            count:
+                Number(count)
 
         }
 
-
     };
+
+    cache.set(
+
+        cacheKey,
+
+        result,
+
+        CACHE_TTL.POI
+
+    );
+
+    return result;
 
 
 }
