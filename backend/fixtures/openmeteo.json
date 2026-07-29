@@ -1,0 +1,9 @@
+{
+  "daily": {
+    "time": ["2026-07-29", "2026-07-30", "2026-07-31"],
+    "temperature_2m_max": [32, 33, 31],
+    "temperature_2m_min": [24, 25, 23],
+    "precipitation_probability_max": [10, 20, 5],
+    "wind_speed_10m_max": [4, 5, 3]
+  }
+}

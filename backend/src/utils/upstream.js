@@ -9,9 +9,100 @@ const axios = require("axios");
 const DEFAULT_TIMEOUT = 5000;
 
 
+function mockRequest(config){
+
+    const url = config.url || "";
+
+
+    if(
+        process.env.MOCK_OVERPASS_FAIL === "1"
+        &&
+        url.includes("overpass")
+    ){
+
+        return Promise.reject({
+            code: "upstream_timeout"
+        });
+
+    }
+
+
+    if(
+        url.includes("nominatim")
+    ){
+
+        return Promise.resolve({
+            status: 200,
+            data: require("../../fixtures/nominatim.json")
+        });
+
+    }
+
+
+    if(
+        url.includes("open-meteo")
+    ){
+
+        return Promise.resolve({
+            status: 200,
+            data: require("../../fixtures/openmeteo.json")
+        });
+
+    }
+
+
+    if(
+        url.includes("restcountries")
+    ){
+
+        return Promise.resolve({
+            status: 200,
+            data: require("../../fixtures/restcountries.json")
+        });
+
+    }
+
+
+    if(
+        url.includes("frankfurter")
+    ){
+
+        return Promise.resolve({
+            status: 200,
+            data: require("../../fixtures/frankfurter.json")
+        });
+
+    }
+
+
+    if(
+        url.includes("overpass")
+    ){
+
+        return Promise.resolve({
+            status: 200,
+            data: require("../../fixtures/overpass-success.json")
+        });
+
+    }
+
+
+    return Promise.resolve({
+        status: 200,
+        data: {}
+    });
+
+}
+
 
 // Execute external request safely
 async function request(config){
+
+    if(process.env.MOCK === "1"){
+
+        return mockRequest(config);
+
+    }
 
 
     try {

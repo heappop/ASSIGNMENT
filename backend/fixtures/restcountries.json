@@ -1,0 +1,14 @@
+[
+  {
+    "name": {
+      "common": "India"
+    },
+    "currencies": {
+      "INR": {
+        "name": "Indian rupee",
+        "symbol": "₹"
+      }
+    },
+    "region": "Asia"
+  }
+]
