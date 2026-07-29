@@ -35,7 +35,7 @@ const {
 
 // Default currency mapping
 // Assignment requires FX against INR
-const DEFAULT_CURRENCY = "IN";
+const DEFAULT_CURRENCY = "INR";
 
 
 
@@ -68,10 +68,14 @@ async function resolveCity(query){
 
 
         name:
-        city.name,
+        city.name
+        ||
+        query,
 
 
         country:
+        city.country
+        ||
         city.display_name
             ?.split(",")
             ?.pop()
@@ -81,7 +85,8 @@ async function resolveCity(query){
 
 
         countryCode:
-        "IN",
+        (city.countryCode || "")
+            .toUpperCase(),
 
 
         lat:
@@ -202,6 +207,18 @@ async function getDestinations(
 
         // Step 2:
         // Fetch independent upstreams together
+        const countryPromise =
+            resolved.countryCode
+            ?
+            getCountry(resolved.countryCode)
+            :
+            Promise.resolve({
+                status:"ok",
+                data:null
+            });
+
+
+
         const [
             weatherResult,
             fxResult,
@@ -226,9 +243,7 @@ async function getDestinations(
 
 
 
-            getCountry(
-                resolved.countryCode
-            ),
+            countryPromise,
 
 
 
@@ -368,6 +383,7 @@ async function getDestinations(
 
 module.exports = {
 
-    getDestinations
+    getDestinations,
+    resolveCity
 
 };

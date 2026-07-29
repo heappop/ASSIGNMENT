@@ -12,8 +12,17 @@ const {
 async function getFx(currency){
 
 
+    const normalizedCurrency =
+        (currency || "")
+            .toUpperCase();
+
+
     // INR does not need external conversion
-    if(currency === "IN"){
+    if(
+        normalizedCurrency === "IN"
+        ||
+        normalizedCurrency === "INR"
+    ){
 
         return {
 
@@ -44,7 +53,7 @@ async function getFx(currency){
 
             params:{
 
-                from:currency,
+                from:normalizedCurrency,
 
                 to:"INR"
 
@@ -70,7 +79,8 @@ async function getFx(currency){
 
         data:{
 
-            currency,
+            currency:
+            normalizedCurrency,
 
 
             rateToInr:
