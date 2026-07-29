@@ -51,6 +51,32 @@ async function searchCity(query) {
 
 
 
+        if(
+            response.status !== "ok"
+        ){
+
+            return response;
+
+        }
+
+
+        if(
+            !Array.isArray(response.data)
+        ){
+
+            return {
+
+                status: "error",
+
+                error: "invalid_geocoding_response",
+
+                data: null
+
+            };
+
+        }
+
+
         return {
 
             status: "ok",

@@ -36,9 +36,17 @@ async function destinations(req,res){
     catch(error){
 
 
+        console.error(error);
+
+
         res.status(500).json({
 
-            error:"internal_server_error"
+            error:"internal_server_error",
+
+            details:
+            error.message
+            ||
+            null
 
         });
 

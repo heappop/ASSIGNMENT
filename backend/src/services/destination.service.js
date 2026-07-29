@@ -49,8 +49,11 @@ async function resolveCity(query){
 
 
     if(
-        result.status !== "ok" ||
-        !result.data.length
+        result.status !== "ok"
+        ||
+        !Array.isArray(result.data)
+        ||
+        result.data.length === 0
     ){
 
         return null;
@@ -106,6 +109,21 @@ async function resolveCity(query){
 // Convert upstream result into block format
 function createBlock(result){
 
+    if(
+        !result
+        ||
+        typeof result !== "object"
+    ){
+
+        return {
+
+            status:"error",
+            error:"invalid_upstream_result",
+            data:null
+        };
+
+    }
+
 
     if(
         result.status === "ok"
@@ -119,7 +137,7 @@ function createBlock(result){
             new Date().toISOString(),
 
             validAt:
-            result.data.validAt
+            result.data?.validAt
             ||
             null,
 

@@ -61,7 +61,26 @@ async function getWeather(
 
 
     const daily =
-        response.data.daily;
+        response.data?.daily;
+
+
+    if(
+        !daily
+        ||
+        !Array.isArray(daily.time)
+    ){
+
+        return {
+
+            status: "error",
+
+            error: "invalid_weather_response",
+
+            data: null
+
+        };
+
+    }
 
 
 

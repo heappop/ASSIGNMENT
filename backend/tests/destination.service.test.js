@@ -34,3 +34,19 @@ test('getFx returns INR as the default currency without external lookup', async 
   assert.equal(result.data.currency, 'INR');
   assert.equal(result.data.rateToInr, 1);
 });
+
+test('getDestinations handles Nominatim lookup failures without crashing', async () => {
+  const nominatimClient = require('../src/clients/nominatim.client');
+  nominatimClient.searchCity = async () => ({
+    status: 'error',
+    error: 'upstream_error'
+  });
+
+  delete require.cache[require.resolve('../src/services/destination.service')];
+  const { getDestinations } = require('../src/services/destination.service');
+
+  const result = await getDestinations(['jaipur']);
+
+  assert.equal(result.destinations[0].blocks.weather.status, 'error');
+  assert.equal(result.destinations[0].resolved, null);
+});
