@@ -26,3 +26,6 @@
 
 ## Specifications Feedback
 Overpass API as a point-of-interest density source is extremely slow and unpredictably unreliable. For a production destination board, I would strongly prefer using a more robust commercial API (such as Google Places, Mapbox, or Foursquare) or host a static geospatial dataset to calculate POI density, as the frequent time-outs hurt user experience despite the isolated block-level error handling.
+
+## AI Tools Used
+- **Antigravity AI (Gemini 3.1 Pro)**: Used as a pair-programmer to scaffold the frontend Vite application, configure React Query, set up Tailwind CSS theming (using brand constraints), write frontend components (App, DestinationCard, Block, RankingList), and manage the project's root `package.json` setup for seamless backend/frontend concurrent startup.
