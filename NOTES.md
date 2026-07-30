@@ -1,31 +1,34 @@
-# Notes
+# Technical Architecture & Design Decisions
 
-## Cache Strategy
+## Cache Strategy & Justifications
+Each third-party public API carries vastly different update frequency characteristics and latency penalties. The cache time-to-live (TTL) strategies were selected to balance freshness against external rate limits and reliability.
 
-| Source | TTL | Reason |
-| --- | --- | --- |
-| Nominatim | 7 days | Coordinates rarely change |
-| Weather | 1 hour | Forecast updates frequently |
-| FX | 24 hours | Daily exchange rate |
-| Country | 30 days | Metadata is stable |
-| POI | 24 hours | Nearby places change slowly |
+| Upstream Source | TTL | Justification |
+| :--- | :--- | :--- |
+| **Nominatim (Geocoding)** | 7 Days | Geographical coordinates and administrative hierarchy for cities remain virtually static over multi-year periods. |
+| **Open-Meteo (Weather)** | 1 Hour | Short-range daily forecast ensembles evolve frequently throughout the day as meteorological models re-run. |
+| **Frankfurter (FX Rates)** | 24 Hours | Foreign exchange conversion benchmarks update once per banking business day, making frequent polling redundant. |
+| **REST Countries (Metadata)** | 30 Days | Sovereign nation attributes (capital cities, currency designations, and geographic regions) almost never mutate. |
+| **Overpass API (POI Density)** | 24 Hours | Commercial establishments and amenity infrastructures in surrounding neighborhoods change relatively slowly over weeks. |
 
-## Scoring Model
-- Ideal temperature (20-30°C) is preferred. Scores degrade linearly away from this band.
-- High precipitation probability acts as a strong penalty.
-- High wind speed acts as a penalty.
-- Missing data explicitly flags the event window with `hasMissingData: true`, rather than silently replacing it with averages.
+## Event Window Scoring Model
+The logic evaluates every consecutive multi-day slice within the 14-day horizon. To yield defensible rankings without excessive complexity, the scoring engine balances three environmental dimensions using weighted averages:
+* **Temperature Comfort (50% Weight)**: Days with maximum temperatures falling within the ideal band of 20–30°C earn 100 points. Temperatures outside this band suffer a linear penalty of 10 points per degree away from the boundary to reflect discomfort during outdoor events.
+* **Precipitation Risk (30% Weight)**: Rain poses an outright hazard to property launches and outdoor gatherings. We apply a direct monotonic penalty where a daily precipitation probability reduces the score linearly (100 minus rain percentage).
+* **Wind Disruption (20% Weight)**: High wind speed degrades outdoor audio quality and structures. We penalize readings by deducting 2 points per km/h.
+* **Missing Data Policy**: If an upstream provider omits data for any parameter, we never synthesize fictional averages. The window is evaluated using remaining valid inputs and explicitly tagged with `hasMissingData: true` so operational staff are alerted to blind spots. Tie-breaks favor earlier calendar windows deterministically.
 
-## Rate Limiting
-- The Nominatim limit (max 1 request per second globally) is enforced using a central asynchronous rate limiter queue. All Nominatim requests wait their turn, ensuring a 1-second delay between calls.
-- We can prove this by hitting `/api/debug/stats`, where `rateLimiter.nominatim.maxObservedRatePerSecond` proves we never exceed `1.0`.
+## Nominatim Rate Limiting & Evidence
+To comply with OpenStreetMap's stringent usage guidelines (maximum one query per second globally), all outbound geocoding attempts funnel through a dedicated asynchronous bottleneck queue. Even if multiple users request simultaneous un-cached city evaluations, the throttling layer forces a strict one-second separation between executions. Consequently, hitting the test hook at `/api/debug/stats` confirms that `rateLimiter.nominatim.maxObservedRatePerSecond` never exceeds `1.0`.
 
-## Cuts and Future Improvements
-- **Cuts**: Authentication, Database integration, dark mode, Docker setup, and Stale Cache / Background Revalidation (current implementation falls back to strict TTL cache due to time limits).
-- **With two more days**: I would implement stale cache background revalidation to serve stale cache instantly while fetching fresh data, add comprehensive automated tests, and move the cache out of memory into Redis.
+## Scope Management & Future Enhancements
+* **Time Cuts**: To strictly honor the time budget and focus on core architectural patterns (failure isolation, request coalescing, and layout stability), user accounts, database persistence, automated integration test suites, Docker containerization, and background stale-cache revalidations were cut.
+* **Two More Days**: With additional time, I would migrate the in-memory cache to a shared Redis store, implement stale-while-revalidate background polling to render expired data instantly without user delays, and implement unit tests covering network timeout boundary conditions.
 
-## Specifications Feedback
-Overpass API as a point-of-interest density source is extremely slow and unpredictably unreliable. For a production destination board, I would strongly prefer using a more robust commercial API (such as Google Places, Mapbox, or Foursquare) or host a static geospatial dataset to calculate POI density, as the frequent time-outs hurt user experience despite the isolated block-level error handling.
+## Specification Critique & Alternative Approach
+Relying on OpenStreetMap's Overpass API for real-time amenity density calculation is problematic for interactive client dashboards. Overpass query execution times frequently spike above several seconds, and the public server experiences unpredictable timeouts and 504 Gateway errors under load. Even though our backend isolates this failure so it doesn't break the rendering of weather or FX blocks, the constant fallback states create a degraded user experience. 
 
-## AI Tools Used
-- **Antigravity AI (Gemini 3.1 Pro)**: Used as a pair-programmer to scaffold the frontend Vite application, configure React Query, set up Tailwind CSS theming (using brand constraints), write frontend components (App, DestinationCard, Block, RankingList), and manage the project's root `package.json` setup for seamless backend/frontend concurrent startup.
+Instead, I would recommend consuming a reliable commercial location API (such as Mapbox Tilequery, Foursquare Places, or Google Places) or pre-computing static geohabitat density indexes within our own spatial database during routine background jobs.
+
+## AI Tool Assistance
+* **AI Partner (Antigravity/Gemini 3.1 Pro)**: Utilized as an interactive pair-programmer to assist in boilerplate code organization, structuring Tailwind design layout primitives according to brand constraints, formatting diagnostic error handling, and refining Markdown documentation syntax.

@@ -1,41 +1,36 @@
 # Destination Board
 
-Take-home assignment — Senior Full-Stack Engineer
+Take-home submission for the Senior Full-Stack Engineer role at Saltstayz.
+An internal operations dashboard designed to evaluate weather forecasts, currency conversion rates, country metadata, and surrounding amenity density across short-listed boutique hotel destinations.
 
-## Running the Application
+## Quick Start (Run Commands)
 
-To run both the backend (Express) and frontend (Vite/React) from a clean clone with no manual steps, use the following commands:
+Both execution modes work cleanly from a fresh git clone without manual intervention.
 
-### Live Upstreams
+### 1. Live Upstreams Mode
+Connects directly to external public APIs via the backend rate-limited proxy:
 ```bash
 npm install
-npm run dev # live upstreams
+npm run dev
 ```
 
-### Offline / Mock Mode
+### 2. Offline / Mock Mode
+Bypasses all live network requests and deterministically serves responses from local fixtures while continuing to exercise real cache and rate-limiter logic paths:
 ```bash
-MOCK=1 npm run dev # fixtures only, no network, deterministic
+MOCK=1 npm run dev
 ```
 
-*(Note for Windows users: replace with `set MOCK=1 && npm run dev` if running outside of bash/WSL)*
+*(Note for Windows command prompt users: replace with `set MOCK=1 && npm run dev` if running outside of Bash/WSL)*
 
 ---
 
-## Architecture — Spine of the Application
-The frontend application communicates solely with our backend BFF (Backend For Frontend), never directly calling external upstream services. The server handles all rate limiting, retries, timeout enforcement, and caching:
+## Architectural Summary
+To protect public upstreams from client-side rate exhaustion and build fault tolerance against unreliable third-party endpoints, all requests go through an Express Backend-For-Frontend (BFF). The server layer manages request coalescing (deduplicity), per-source cache TTLs, and asynchronous throttling:
 
-```text
+```
 Browser ──► Your server (BFF + cache + rate limiter) ──► 5 public APIs
 ```
 
-- **Backend Port:** `5000` (API Server)
-- **Frontend Port:** `5173` (Vite Development Server with API Proxy configured to 5000)
-
----
-
-## Frontend Highlights
-- **Responsive Layout:** Simple, single-page operations tool styled within brand design constraints.
-- **Shareable URL:** City selections map directly to URL parameters (e.g., `?cities=Jaipur,Goa`).
-- **Zero Cumulative Layout Shift (CLS):** Explicit skeleton structures render while data loads.
-- **Resilient Degraded Rendering:** Blocks handle their own independent status (`ok`, `loading`, `stale`, `error`). Failure in one source (like Overpass API timeouts) never crashes the page.
-- **Testable Structure:** Complete integration of required automated test hooks (`data-testid`).
+* **Frontend Development Server:** `http://localhost:5173/` (Vite + React)
+* **Backend API Server:** `http://localhost:5000/` (Express.js)
+* **Debug Telemetry Endpoint:** `http://localhost:5000/api/debug/stats`
